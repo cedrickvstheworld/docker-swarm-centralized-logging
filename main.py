@@ -5,13 +5,17 @@ import json
 from dateutil.parser import  parse
 import pytz
 time_zone = pytz.timezone('Asia/Manila')
-import container_inspect
 from glob import glob
 from sty import fg, Style, RgbFg
 from random import randint
-from threading import Thread
+import subprocess
 
 path = '/var/lib/docker/containers/'
+
+def check_this_out(container_id, format_wild_card):
+    result = subprocess.\
+        check_output(['docker', 'inspect', container_id, '--format', "'{{json %s}}'" % format_wild_card])
+    return json.loads(result.decode("utf-8")[1:-2])
 
 # containers data
 container_path_list = glob(path + '*')
@@ -19,16 +23,16 @@ running_containers = []
 running_containers_data = []
 for i in container_path_list:
     id = i.split('/')[-1]
-    state = container_inspect.check_this_out(id, '.State')
+    state = check_this_out(id, '.State')
     if not state['Running']:
         continue
-    labels = container_inspect.check_this_out(id, '.Config.Labels')
+    labels = check_this_out(id, '.Config.Labels')
     container_name = ''
     initial_logs = ''
     try:
         name = labels['com.docker.swarm.service.name']
     except:
-        name = container_inspect.check_this_out(id, '.Name')
+        name = check_this_out(id, '.Name')
     # get initial logs
     try:
         log_file = '%s%s/%s-json.log' % (path, id, id)
@@ -51,7 +55,7 @@ def line_formater(line, container_name):
         parsed = json.loads(line)
         time = parse(parsed['time']).astimezone(time_zone)
         milliseconds = int(round(time.strptime(time.strftime('%d.%m.%Y %H:%M:%S,%f'), '%d.%m.%Y %H:%M:%S,%f').timestamp() * 1000))
-        return ['%s %s | %s' % (container_name, parsed["log"].split('\n')[0], time.strftime('%H:%M:%S %Y-%m-%d')), milliseconds]
+        return ['%s | %s  %s' % (container_name, time.strftime('%H:%M:%S %Y-%m-%d'), parsed["log"].split('\n')[0]), milliseconds]
     except:
         return ['', 0]
 
@@ -73,31 +77,16 @@ for i in sorted_initial_logs:
     display_initial_logs += i['log']
 print(display_initial_logs)
 
-displayed_logs = ''
-initial_logs_list = initial_logs_raw.split('\n')
-for i in initial_logs_list:
-    line = json.loads(i)
-
-
-
 class Handler(FileSystemEventHandler):
     def on_modified(self, event):
-        print('wowowowoww')
-        print(event.src_path)
-    def on_created(self, event):
-        print('here')
-        print(event.src_path)
-        # if not event.is_directory:
-        #     src = event.src_path.split('~')[0]
-        #     print(src)
-        #     # with open(src, 'r+') as file:
-        #     #     content = file.read()
-        #     #     content = json.loads(content)
-        #     #     time = parse(content['time']).astimezone(time_zone)
-        #     #     readable_date = time.strftime('%d.%m.%Y %H:%M:%S,%f')
-        #     #     milliseconds = time.strptime(readable_date, '%d.%m.%Y %H:%M:%S,%f').timestamp() * 1000
-        #     #     print(int(round(milliseconds)))
-        #     #     print(readable_date)
+        if not event.is_directory:
+            src = event.src_path
+            container_id = src.split('/')[-2]
+            with open(src, 'r+') as file:
+                content = file.read()
+                line = content.split('\n')[-2]
+                container_name = (next((item for item in running_containers_data if item['id'] == container_id)))['name']
+                print(line_formater(line, container_name)[0])
 
 event_hander = Handler()
 observer = Observer()
@@ -105,7 +94,7 @@ observer.schedule(event_hander, path=path, recursive=True)
 observer.start()
 try:
     while True:
-        time.sleep(1)
+        time.sleep(0.5)
 except KeyboardInterrupt:
     observer.stop()
 observer.join()
