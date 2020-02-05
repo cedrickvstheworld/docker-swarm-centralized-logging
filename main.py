@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+import argparse
 import time
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -11,10 +13,20 @@ from random import randint
 import subprocess
 import requests
 
+# get catcher url
+parser = argparse.ArgumentParser()
+parser.add_argument("--c")
+args = parser.parse_args()
+catcher_url = args.c
+if catcher_url == None:
+    print('Error: provide event catcher url')
+    quit()
+    exit()
+
 path = '/var/lib/docker/containers/'
 
 def send_log_to_listener(log):
-    requests.post('http://localhost:8000/', json={"log": log})
+    requests.post(catcher_url, json={"log": log})
 
 def check_this_out(container_id, format_wild_card):
     result = subprocess.\

@@ -14,3 +14,9 @@ def listener():
         except:
             pass
         return 'ok'
+
+"""
+to run this madness
+$ export FLASK_APP=event_catcher.py
+$ python3 -m flask run --port=8000
+"""
