@@ -9,8 +9,12 @@ from glob import glob
 from sty import fg, Style, RgbFg
 from random import randint
 import subprocess
+import requests
 
 path = '/var/lib/docker/containers/'
+
+def send_log_to_listener(log):
+    requests.post('http://localhost:8000/', json={"log": log})
 
 def check_this_out(container_id, format_wild_card):
     result = subprocess.\
@@ -76,6 +80,7 @@ display_initial_logs = ''
 for i in sorted_initial_logs:
     display_initial_logs += i['log']
 print(display_initial_logs)
+send_log_to_listener(display_initial_logs)
 
 class Handler(FileSystemEventHandler):
     def on_modified(self, event):
@@ -86,7 +91,9 @@ class Handler(FileSystemEventHandler):
                 content = file.read()
                 line = content.split('\n')[-2]
                 container_name = (next((item for item in running_containers_data if item['id'] == container_id)))['name']
-                print(line_formater(line, container_name)[0])
+                new_line = line_formater(line, container_name)[0]
+                print(new_line)
+                send_log_to_listener(new_line)
 
 event_hander = Handler()
 observer = Observer()
