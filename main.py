@@ -37,6 +37,7 @@ def check_this_out(container_id, format_wild_card):
 container_path_list = glob(path + '*')
 running_containers = []
 running_containers_data = []
+longest_name_length = 0
 for i in container_path_list:
     id = i.split('/')[-1]
     state = check_this_out(id, '.State')
@@ -57,21 +58,37 @@ for i in container_path_list:
             initial_logs += content
     except:
         pass
-    running_containers.append(id)
+    # for visual pleasure
+    name_length = len(name)
+    if name_length > longest_name_length:
+        longest_name_length = name_length
     # just some text color
+    # r = randint(0, 255)
+    # g = randint(0, 255)
+    # b = randint(0, 255)
+    # fg.color = Style(RgbFg(r, g, b))
+    # name = fg.color + name.capitalize() + fg.rs
+    running_containers_data.append({"id": id, "name": name, "initial_logs": initial_logs})
+    running_containers.append(id)
+
+# for visual pleasure
+for i in running_containers_data:
+    name = i["name"]
+    spaces_to_be_added = longest_name_length - len(name)
+    name += ' ' * spaces_to_be_added
     r = randint(0, 255)
     g = randint(0, 255)
     b = randint(0, 255)
     fg.color = Style(RgbFg(r, g, b))
-    name = fg.color + name.capitalize() + fg.rs
-    running_containers_data.append({"id": id, "name": name, "initial_logs": initial_logs})
+    i["name"] = fg.color + name.capitalize() + fg.rs
 
 def line_formater(line, container_name):
     try:
         parsed = json.loads(line)
         time = parse(parsed['time']).astimezone(time_zone)
         milliseconds = int(round(time.strptime(time.strftime('%d.%m.%Y %H:%M:%S,%f'), '%d.%m.%Y %H:%M:%S,%f').timestamp() * 1000))
-        return ['%s | %s  %s' % (container_name, time.strftime('%H:%M:%S %Y-%m-%d'), parsed["log"].split('\n')[0]), milliseconds]
+        actual_log = '%s | %s | %s' % (container_name, time.strftime('%H:%M:%S %Y-%m-%d'), parsed["log"].split('\n')[0])
+        return [actual_log, milliseconds]
     except:
         return ['', 0]
 
@@ -113,7 +130,11 @@ observer.schedule(event_hander, path=path, recursive=True)
 observer.start()
 try:
     while True:
-        time.sleep(0.5)
+        time.sleep(0.3)
 except KeyboardInterrupt:
     observer.stop()
 observer.join()
+
+"""
+sudo ./main.py --c http://localhost:8000/
+"""
