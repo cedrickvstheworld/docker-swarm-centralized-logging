@@ -112,7 +112,7 @@ class Handler(FileSystemEventHandler):
             container_id = src.split('/')[-2]
             with open(src, 'r+') as file:
                 content = file.read()
-                line = content.split('\n')[-2]
+                line = "{\"log" + content.split("}\n{\"log")[-1]
                 container_name = (next((item for item in running_containers_data if item['id'] == container_id)))['name']
                 new_line = line_formater(line, container_name)[0]
                 print(new_line)
