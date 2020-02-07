@@ -18,5 +18,5 @@ def listener():
 """
 to run this madness
 $ export FLASK_APP=event_catcher.py
-$ python3 -m flask run --port=8000
+$ python3 -m flask run --port=6070 --host=0.0.0.0
 """

@@ -62,12 +62,6 @@ for i in container_path_list:
     name_length = len(name)
     if name_length > longest_name_length:
         longest_name_length = name_length
-    # just some text color
-    # r = randint(0, 255)
-    # g = randint(0, 255)
-    # b = randint(0, 255)
-    # fg.color = Style(RgbFg(r, g, b))
-    # name = fg.color + name.capitalize() + fg.rs
     running_containers_data.append({"id": id, "name": name, "initial_logs": initial_logs})
     running_containers.append(id)
 
@@ -136,5 +130,5 @@ except KeyboardInterrupt:
 observer.join()
 
 """
-sudo ./main.py --c http://localhost:8000/
+sudo ./main.py --c http://host-ip-address:6070/
 """
