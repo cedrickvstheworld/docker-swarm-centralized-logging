@@ -57,7 +57,7 @@ for i in container_path_list:
             content = file.read()
             initial_logs += content
     except:
-        pass
+        content = ''
     # for visual pleasure
     name_length = len(name)
     if name_length > longest_name_length:
