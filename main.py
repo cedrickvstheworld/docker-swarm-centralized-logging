@@ -107,31 +107,34 @@ send_log_to_listener(display_initial_logs)
 
 class Handler(FileSystemEventHandler):
     def on_modified(self, event):
-        if not event.is_directory:
-            src = event.src_path
-            container_id = src.split('/')[-2]
-            with open(src, 'r+') as file:
-                content = file.read()
-                container_obj = (next((item for item in running_containers_data if item['id'] == container_id)))
-                container_name = container_obj['name']
-                current_logs = container_obj['current_logs']
-                new_logs = content.replace(current_logs, '')
-                new_logs_batch = ''
-                initial_logs_raw = []
-                log_line_list = new_logs.split("{\"log")
-                for i in log_line_list:
-                    results = line_formater("{\"log" + i, container_name)
-                    if results[0] == '':
-                        continue
-                    initial_logs_raw.append({
-                        "log": '%s\n' % results[0],
-                        "ms": results[1]
-                    })
-                for i in initial_logs_raw:
-                    new_logs_batch += i['log']
-                print(new_logs_batch)
-                container_obj['current_logs'] = content
-                send_log_to_listener(new_logs_batch)
+        try:
+            if not event.is_directory:
+                src = event.src_path
+                container_id = src.split('/')[-2]
+                with open(src, 'r+') as file:
+                    content = file.read()
+                    container_obj = (next((item for item in running_containers_data if item['id'] == container_id)))
+                    container_name = container_obj['name']
+                    current_logs = container_obj['current_logs']
+                    new_logs = content.replace(current_logs, '')
+                    new_logs_batch = ''
+                    initial_logs_raw = []
+                    log_line_list = new_logs.split("{\"log")
+                    for i in log_line_list:
+                        results = line_formater("{\"log" + i, container_name)
+                        if results[0] == '':
+                            continue
+                        initial_logs_raw.append({
+                            "log": '%s\n' % results[0],
+                            "ms": results[1]
+                        })
+                    for i in initial_logs_raw:
+                        new_logs_batch += i['log']
+                    print(new_logs_batch)
+                    container_obj['current_logs'] = content
+                    send_log_to_listener(new_logs_batch)
+        except:
+            pass
 
 event_hander = Handler()
 observer = Observer()
