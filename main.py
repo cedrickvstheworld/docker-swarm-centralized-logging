@@ -1,8 +1,5 @@
 #! /usr/bin/env python3
 import argparse
-import time
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 import json
 from dateutil.parser import  parse
 import pytz
@@ -12,6 +9,8 @@ from sty import fg, Style, RgbFg
 from random import randint
 import subprocess
 import requests
+from threading import Thread
+import tailhead
 
 # get catcher url
 parser = argparse.ArgumentParser()
@@ -35,6 +34,7 @@ def check_this_out(container_id, format_wild_card):
 
 # containers data
 container_path_list = glob(path + '*')
+container_log_file_list = []
 running_containers = []
 running_containers_data = []
 longest_name_length = 0
@@ -53,6 +53,7 @@ for i in container_path_list:
     # get initial logs
     try:
         log_file = '%s%s/%s-json.log' % (path, id, id)
+        container_log_file_list.append(log_file)
         with open(log_file, 'r+') as file:
             content = file.read()
             initial_logs += content
@@ -105,48 +106,32 @@ for i in sorted_initial_logs:
 print(display_initial_logs)
 send_log_to_listener(display_initial_logs)
 
-class Handler(FileSystemEventHandler):
-    def on_modified(self, event):
-        try:
-            if not event.is_directory:
-                src = event.src_path
-                container_id = src.split('/')[-2]
-                with open(src, 'r+') as file:
-                    content = file.read()
-                    container_obj = (next((item for item in running_containers_data if item['id'] == container_id)))
-                    container_name = container_obj['name']
-                    current_logs = container_obj['current_logs']
-                    new_logs = content.replace(current_logs, '')
-                    new_logs_batch = ''
-                    initial_logs_raw = []
-                    log_line_list = new_logs.split("{\"log")
-                    for i in log_line_list:
-                        results = line_formater("{\"log" + i, container_name)
-                        if results[0] == '':
-                            continue
-                        initial_logs_raw.append({
-                            "log": '%s\n' % results[0],
-                            "ms": results[1]
-                        })
-                    for i in initial_logs_raw:
-                        new_logs_batch += i['log']
-                    print(new_logs_batch)
-                    container_obj['current_logs'] = content
-                    send_log_to_listener(new_logs_batch)
-        except:
-            pass
+def logging_thread(file):
+    container_id = file.split('/')[-2]
+    container_obj = (next((item for item in running_containers_data if item['id'] == container_id)))
+    container_name = container_obj['name']
+    for newlines in tailhead.follow_path(file):
+        if newlines is not None:
+            new_logs_batch = ''
+            initial_logs_raw = []
+            log_line_list = newlines.split("{\"log")
+            for i in log_line_list:
+                results = line_formater("{\"log" + i, container_name)
+                if results[0] == '':
+                    continue
+                initial_logs_raw.append({
+                    "log": results[0],
+                    "ms": results[1]
+                })
+                for i in initial_logs_raw:
+                    new_logs_batch += i['log']
+                print(new_logs_batch)
+                container_obj['current_logs'] = content
+                send_log_to_listener(new_logs_batch)
 
-event_hander = Handler()
-observer = Observer()
-observer.schedule(event_hander, path=path, recursive=True)
-observer.start()
-try:
-    while True:
-        # time.sleep(0.1)
-        pass
-except KeyboardInterrupt:
-    observer.stop()
-observer.join()
+for i in container_log_file_list:
+    worker = Thread(target=logging_thread, args=(i,))
+    worker.start()
 
 """
 sudo ./main.py --c http://host-ip-address:6070/
