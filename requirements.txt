@@ -3,4 +3,4 @@ python-dateutil==2.8.0
 pytz==2019.3
 tailhead==1.0.2
 sty==1.0.0b12
-requests==2.22.0
+requests==2.31.0
